@@ -7,7 +7,7 @@ from database import init_db, add_entry, get_all_entries, get_totals, get_monthl
 
 app = Flask(__name__, static_folder="static")
 OLLAMA_URL = "http://localhost:11434/api/generate"
-MODEL = "llava:13b"
+MODEL = "llama3.2-vision:latest"
 
 def parse_receipt_with_ollama(image_b64: str) -> dict:
     prompt = (
