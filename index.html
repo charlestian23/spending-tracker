@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Spending Tracker</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, sans-serif; background: #f5f5f4; color: #1c1917; min-height: 100vh; }
+  .container { max-width: 780px; margin: 0 auto; padding: 2rem 1.5rem; }
+  h1 { font-size: 1.5rem; font-weight: 600; margin-bottom: 0.25rem; }
+  .subtitle { font-size: 0.875rem; color: #78716c; margin-bottom: 1.75rem; }
+  .badge-local { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; background: #dcfce7; color: #166534; padding: 3px 10px; border-radius: 99px; font-weight: 500; margin-left: 10px; vertical-align: middle; }
+
+  .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 1.75rem; }
+  .metric { background: #fff; border: 1px solid #e7e5e4; border-radius: 10px; padding: 1rem 1.25rem; }
+  .metric-label { font-size: 12px; color: #78716c; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .metric-value { font-size: 1.5rem; font-weight: 600; }
+
+  .card { background: #fff; border: 1px solid #e7e5e4; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; }
+  .card h2 { font-size: 1rem; font-weight: 600; margin-bottom: 1rem; }
+
+  .dropzone { border: 2px dashed #d6d3d1; border-radius: 10px; padding: 2.5rem 1.5rem; text-align: center; cursor: pointer; transition: background 0.15s, border-color 0.15s; }
+  .dropzone:hover, .dropzone.drag-over { background: #fafaf9; border-color: #a8a29e; }
+  .dropzone input { display: none; }
+  .dropzone .icon { font-size: 2rem; margin-bottom: 0.5rem; }
+  .dropzone strong { display: block; font-size: 0.95rem; margin-bottom: 0.25rem; }
+  .dropzone p { font-size: 0.8rem; color: #78716c; }
+
+  .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid #d6d3d1; border-top-color: #44403c; border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .analyzing { display: flex; align-items: center; gap: 10px; font-size: 0.875rem; color: #57534e; padding: 0.75rem 1rem; background: #fafaf9; border-radius: 8px; border: 1px solid #e7e5e4; margin-top: 1rem; }
+
+  .result { margin-top: 1rem; border: 1px solid #e7e5e4; border-radius: 10px; overflow: hidden; }
+  .result-header { display: flex; justify-content: space-between; align-items: center; padding: 0.875rem 1rem; background: #fafaf9; border-bottom: 1px solid #e7e5e4; }
+  .result-merchant { font-weight: 600; font-size: 0.95rem; }
+  .result-amount { font-size: 1.25rem; font-weight: 700; }
+  .result-meta { padding: 0.75rem 1rem; font-size: 0.8rem; color: #57534e; display: flex; gap: 1rem; align-items: center; }
+  .result-actions { padding: 0.75rem 1rem; border-top: 1px solid #e7e5e4; display: flex; gap: 8px; }
+
+  .btn { padding: 7px 16px; border-radius: 7px; font-size: 0.875rem; cursor: pointer; font-family: inherit; border: 1px solid #d6d3d1; background: #fff; color: #1c1917; transition: background 0.12s; }
+  .btn:hover { background: #fafaf9; }
+  .btn-primary { background: #1c1917; color: #fff; border-color: #1c1917; }
+  .btn-primary:hover { background: #292524; }
+  .btn-danger { color: #dc2626; border-color: #fca5a5; }
+  .btn-danger:hover { background: #fef2f2; }
+
+  .badge { display: inline-block; padding: 2px 9px; border-radius: 99px; font-size: 11px; font-weight: 500; }
+  .cat-food { background: #fef9c3; color: #854d0e; }
+  .cat-shopping { background: #dbeafe; color: #1e40af; }
+  .cat-entertainment { background: #f3e8ff; color: #6b21a8; }
+  .cat-transport { background: #dcfce7; color: #166534; }
+  .cat-other { background: #f4f4f5; color: #52525b; }
+
+  .error { margin-top: 1rem; padding: 0.75rem 1rem; background: #fef2f2; border: 1px solid #fca5a5; border-radius: 8px; font-size: 0.875rem; color: #dc2626; }
+  .items-list { margin: 0; padding: 0; list-style: none; }
+  .item-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid #f5f5f4; font-size: 0.875rem; }
+  .item-row:last-child { border-bottom: none; }
+  .item-row input[type=checkbox] { width: 15px; height: 15px; accent-color: #1c1917; cursor: pointer; flex-shrink: 0; }
+  .item-row label { flex: 1; cursor: pointer; }
+  .item-row label.excluded { text-decoration: line-through; color: #a8a29e; }
+  .item-row .item-amt { font-weight: 500; min-width: 60px; text-align: right; }
+  .item-row .item-amt.excluded { color: #a8a29e; }
+  .items-section { padding: 0.75rem 1rem; border-bottom: 1px solid #e7e5e4; }
+  .items-section h4 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #78716c; margin-bottom: 8px; }
+  .running-total { display: flex; justify-content: space-between; padding: 8px 1rem; font-size: 0.875rem; font-weight: 600; background: #fafaf9; }
+  .running-total span:last-child { font-size: 1.1rem; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+  th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #78716c; padding: 0 0 10px; border-bottom: 1px solid #e7e5e4; }
+  td { padding: 10px 0; border-bottom: 1px solid #f5f5f4; vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  .empty { text-align: center; padding: 2rem 0; color: #78716c; font-size: 0.875rem; }
+
+  .by-cat { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 0.5rem; }
+  .cat-item { font-size: 0.8rem; color: #57534e; }
+  .chart-wrap { position: relative; width: 100%; height: 220px; }
+  .chart-empty { text-align: center; padding: 3rem 0; color: #78716c; font-size: 0.875rem; }
+  .chart-bars { display: flex; align-items: flex-end; gap: 6px; height: 170px; padding: 0 0 0 48px; }
+  .chart-bar-col { display: flex; flex-direction: column; align-items: center; flex: 1; height: 100%; justify-content: flex-end; gap: 4px; }
+  .chart-bar { width: 100%; background: #1c1917; border-radius: 4px 4px 0 0; transition: height 0.3s ease; min-height: 2px; cursor: pointer; position: relative; }
+  .chart-bar:hover { background: #44403c; }
+  .chart-bar .tooltip { display: none; position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); background: #1c1917; color: #fff; font-size: 11px; padding: 3px 8px; border-radius: 5px; white-space: nowrap; z-index: 10; }
+  .chart-bar:hover .tooltip { display: block; }
+  .chart-label { font-size: 10px; color: #78716c; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; }
+  .chart-y-axis { position: absolute; left: 0; top: 0; height: 170px; width: 44px; display: flex; flex-direction: column; justify-content: space-between; }
+  .chart-y-label { font-size: 10px; color: #a8a29e; text-align: right; padding-right: 6px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Spending Tracker <span class="badge-local">&#x1F512; 100% local</span></h1>
+  <p class="subtitle">All data stays on your machine. Receipt parsing runs via Ollama.</p>
+
+  <div class="metrics">
+    <div class="metric"><div class="metric-label">All time</div><div class="metric-value" id="m-total">$0.00</div></div>
+    <div class="metric"><div class="metric-label">This month</div><div class="metric-value" id="m-month">$0.00</div></div>
+    <div class="metric"><div class="metric-label">Transactions</div><div class="metric-value" id="m-count">0</div></div>
+  </div>
+
+  <div class="card">
+    <h2>Monthly spending</h2>
+    <div class="chart-wrap" id="chart-wrap">
+      <div class="chart-empty">No data yet — add some transactions to see your chart.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Upload a receipt</h2>
+    <div class="dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()">
+      <input type="file" id="fileInput" accept="image/*" />
+      <div class="icon">📷</div>
+      <strong>Click or drag a receipt photo</strong>
+      <p>JPEG, PNG, or WEBP — parsed locally by Ollama + LLaVA</p>
+    </div>
+    <div id="upload-status"></div>
+  </div>
+
+  <div class="card">
+    <h2>Transaction log</h2>
+    <div id="log">
+      <div class="empty">No transactions yet.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+let pending = null;
+
+function catClass(c) { return 'cat-' + (c || 'other'); }
+function catLabel(c) {
+  return { food: 'Food & drink', shopping: 'Shopping', entertainment: 'Entertainment', transport: 'Transport', other: 'Other' }[c] || 'Other';
+}
+function fmt(n) { return '$' + Number(n).toFixed(2); }
+
+function updateRunningTotal() {
+  const checkboxes = document.querySelectorAll('.item-check');
+  let total = 0;
+  checkboxes.forEach(cb => {
+    const amt = parseFloat(cb.dataset.amount);
+    const label = document.getElementById('label-' + cb.dataset.idx);
+    const amtEl = document.getElementById('amt-' + cb.dataset.idx);
+    if (cb.checked) {
+      total += amt;
+      label.classList.remove('excluded');
+      amtEl.classList.remove('excluded');
+    } else {
+      label.classList.add('excluded');
+      amtEl.classList.add('excluded');
+    }
+  });
+  const totalEl = document.getElementById('running-total');
+  if (totalEl) totalEl.textContent = fmt(total);
+}
+
+function renderChart(monthly) {
+  const wrap = document.getElementById('chart-wrap');
+  if (!monthly || !monthly.length) {
+    wrap.innerHTML = '<div class="chart-empty">No data yet — add some transactions to see your chart.</div>';
+    return;
+  }
+  const maxVal = Math.max(...monthly.map(m => m.total));
+  const yTop = Math.ceil(maxVal / 50) * 50 || 100;
+  const yMid = yTop / 2;
+  const yLabels = [fmt(yTop), fmt(yMid), '$0'];
+
+  const bars = monthly.map(m => {
+    const pct = maxVal > 0 ? (m.total / yTop) * 100 : 0;
+    const label = m.month.slice(0, 7);
+    const shortLabel = new Date(m.month + '-02').toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+    return `<div class="chart-bar-col">
+      <div class="chart-bar" style="height:${Math.max(pct, 1)}%">
+        <div class="tooltip">${shortLabel}: ${fmt(m.total)}</div>
+      </div>
+      <div class="chart-label">${shortLabel}</div>
+    </div>`;
+  }).join('');
+
+  const yAxis = yLabels.map(l => `<div class="chart-y-label">${l}</div>`).join('');
+
+  wrap.innerHTML = `
+    <div style="position:relative">
+      <div class="chart-y-axis">${yAxis}</div>
+      <div class="chart-bars">${bars}</div>
+    </div>`;
+}
+
+async function loadData() {
+  const [totals, entries, monthly] = await Promise.all([
+    fetch('/api/totals').then(r => r.json()),
+    fetch('/api/entries').then(r => r.json()),
+    fetch('/api/monthly').then(r => r.json())
+  ]);
+  document.getElementById('m-total').textContent = fmt(totals.total);
+  document.getElementById('m-month').textContent = fmt(totals.month_total);
+  document.getElementById('m-count').textContent = totals.count;
+  renderChart(monthly);
+
+  const log = document.getElementById('log');
+  if (!entries.length) { log.innerHTML = '<div class="empty">No transactions yet.</div>'; return; }
+  log.innerHTML = `<table>
+    <thead><tr><th>Merchant</th><th>Category</th><th>Date</th><th style="text-align:right">Amount</th><th></th></tr></thead>
+    <tbody>
+      ${entries.map(e => `<tr>
+        <td><strong>${e.merchant}</strong>${e.notes ? `<br><span style="color:#78716c;font-size:11px">${e.notes}</span>` : ''}</td>
+        <td><span class="badge ${catClass(e.category)}">${catLabel(e.category)}</span></td>
+        <td style="color:#78716c">${e.date}</td>
+        <td style="text-align:right;font-weight:600">${fmt(e.amount)}</td>
+        <td><button class="btn btn-danger" onclick="deleteEntry(${e.id})">✕</button></td>
+      </tr>`).join('')}
+    </tbody>
+  </table>`;
+}
+
+async function deleteEntry(id) {
+  await fetch('/api/entries/' + id, { method: 'DELETE' });
+  loadData();
+}
+
+function setStatus(html) { document.getElementById('upload-status').innerHTML = html; }
+
+async function handleFile(file) {
+  if (!file) return;
+  setStatus('<div class="analyzing"><div class="spinner"></div>Analyzing receipt with Ollama (this may take 10–20 seconds)...</div>');
+  const fd = new FormData();
+  fd.append('image', file);
+  try {
+    const resp = await fetch('/api/parse', { method: 'POST', body: fd });
+    const data = await resp.json();
+    if (!resp.ok) { setStatus(`<div class="error">${data.error}</div>`); return; }
+    pending = data;
+    const items = data.items || [];
+    const total = items.reduce((s, i) => s + (i.amount || 0), 0);
+    const itemsHtml = items.map((item, idx) => `
+      <li class="item-row">
+        <input type="checkbox" class="item-check" id="chk-${idx}" data-idx="${idx}" data-amount="${item.amount}" checked onchange="updateRunningTotal()" />
+        <label for="chk-${idx}" id="label-${idx}">${item.name}</label>
+        <span class="item-amt" id="amt-${idx}">${fmt(item.amount)}</span>
+      </li>`).join('');
+    setStatus(`
+      <div class="result">
+        <div class="result-header">
+          <span class="result-merchant">${data.merchant}</span>
+          <span class="badge ${catClass(data.category)}" style="font-size:12px">${catLabel(data.category)}</span>
+        </div>
+        <div class="items-section">
+          <h4>Line items — uncheck anything you are not paying for</h4>
+          <ul class="items-list">${itemsHtml}</ul>
+        </div>
+        <div class="running-total">
+          <span>Your total</span>
+          <span id="running-total">${fmt(total)}</span>
+        </div>
+        <div class="result-actions">
+          <button class="btn btn-primary" onclick="confirmAdd()">Add to log</button>
+          <button class="btn" onclick="setStatus('')">Discard</button>
+        </div>
+      </div>
+    `);
+  } catch(e) {
+    setStatus(`<div class="error">Could not connect to Ollama. Is it running? (ollama serve)</div>`);
+  }
+}
+
+async function confirmAdd() {
+  if (!pending) return;
+  const checkboxes = document.querySelectorAll('.item-check');
+  const includedItems = [];
+  checkboxes.forEach(cb => {
+    if (cb.checked) {
+      const idx = parseInt(cb.dataset.idx);
+      includedItems.push(pending.items[idx]);
+    }
+  });
+  if (!includedItems.length) { alert('No items selected.'); return; }
+  const amount = includedItems.reduce((s, i) => s + (i.amount || 0), 0);
+  const excludedNames = Array.from(checkboxes)
+    .filter(cb => !cb.checked)
+    .map(cb => pending.items[parseInt(cb.dataset.idx)].name);
+  const notes = excludedNames.length
+    ? `Excluded: ${excludedNames.join(', ')}`
+    : (pending.notes || '');
+  await fetch('/api/entries', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...pending, amount: Math.round(amount * 100) / 100, notes })
+  });
+  pending = null;
+  setStatus('');
+  loadData();
+}
+
+document.getElementById('fileInput').addEventListener('change', e => { handleFile(e.target.files[0]); e.target.value = ''; });
+const dz = document.getElementById('dropzone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('drag-over'); handleFile(e.dataTransfer.files[0]); });
+
+loadData();
+</script>
+</body>
+</html>
