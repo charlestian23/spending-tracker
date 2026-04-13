@@ -11,15 +11,13 @@ MODEL = "llama3.2-vision:latest"
 
 def parse_receipt_with_ollama(image_b64: str) -> dict:
     prompt = (
-        "You are a receipt parser. Look at this receipt image and extract every individual line item, "
-        "the merchant/store name, and categorize the overall purchase. "
+        "You are a receipt parser. Look at this receipt image and extract the total amount paid, "
+        "the merchant or store name, and a short description of what was purchased. "
         "Respond ONLY with a valid JSON object in exactly this format: "
-        '{"merchant": "Whole Foods", "category": "food", "notes": "grocery run", '
-        '"items": [{"name": "Organic Milk", "amount": 4.99}, {"name": "Bread", "amount": 3.49}, {"name": "Apples", "amount": 6.00}]}. '
-        "Each item must have a name and amount. "
-        "If you cannot read individual items, make a single item with the name being a short description of the purchase and the total as its amount. "
-        "Categories must be one of: food, shopping, entertainment, transport, other. "
-        "Do not include tax as a line item — roll it into the total proportionally or omit it. "
+        '{"merchant": "Whole Foods", "amount": 47.82, "category": "food", "notes": "Weekly groceries"}. '
+        "The amount must be the final total including tax. "
+        "Categories must be one of: food, shopping, entertainment, transportation, gas, other. "
+        "If you cannot determine the total, set amount to null. "
         "No explanation, no markdown, just the raw JSON object."
     )
     payload = {
@@ -32,14 +30,7 @@ def parse_receipt_with_ollama(image_b64: str) -> dict:
     resp = requests.post(OLLAMA_URL, json=payload, timeout=60)
     resp.raise_for_status()
     raw = resp.json().get("response", "{}")
-    result = json.loads(raw)
-    # Ensure items list exists
-    if "items" not in result or not result["items"]:
-        result["items"] = [{"name": result.get("notes", "Purchase"), "amount": result.get("amount", 0)}]
-    # Compute total from items as fallback
-    if not result.get("amount"):
-        result["amount"] = round(sum(i.get("amount", 0) for i in result["items"]), 2)
-    return result
+    return json.loads(raw)
 
 @app.route("/")
 def index():
@@ -55,8 +46,8 @@ def parse():
         result = parse_receipt_with_ollama(img_b64)
     except Exception as e:
         return jsonify({"error": f"Ollama error: {str(e)}"}), 500
-    if not result.get("items"):
-        return jsonify({"error": "Could not detect any items on the receipt"}), 422
+    if not result.get("amount"):
+        return jsonify({"error": "Could not detect a total amount on the receipt"}), 422
     return jsonify(result)
 
 @app.route("/api/entries", methods=["GET"])
