@@ -39,6 +39,11 @@ def parse_receipt_with_ollama(image_b64: str) -> dict:
         "images": [image_b64],
         "stream": False,
         "format": "json",
+        "options": {
+            "temperature": 0.8,
+            "num_ctx": 4096,
+            "num_predict": 256,
+        },
     }
 
     log.info("Sending receipt to Ollama (model: %s)", MODEL)
