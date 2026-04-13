@@ -4,7 +4,14 @@ import logging
 import time
 import requests
 from flask import Flask, request, jsonify, send_from_directory
-from database import init_db, add_entry, get_all_entries, get_totals, get_monthly_totals, delete_entry
+from database import (
+    init_db,
+    add_entry,
+    get_all_entries,
+    get_totals,
+    get_monthly_totals,
+    delete_entry,
+)
 
 # ── Logging setup ──────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -17,6 +24,7 @@ log = logging.getLogger(__name__)
 app = Flask(__name__, static_folder="static")
 OLLAMA_URL = "http://localhost:11434/api/generate"
 MODEL = "llama3.2-vision:latest"
+
 
 def parse_receipt_with_ollama(image_b64: str) -> dict:
     prompt = (
@@ -67,9 +75,11 @@ def parse_receipt_with_ollama(image_b64: str) -> dict:
 
     return json.loads(raw)
 
+
 @app.route("/")
 def index():
     return send_from_directory("static", "index.html")
+
 
 @app.route("/api/parse", methods=["POST"])
 def parse():
@@ -99,14 +109,18 @@ def parse():
 
     log.info(
         "Parsed OK — merchant: %r  amount: $%.2f  category: %s  date: %s",
-        result.get("merchant"), result.get("amount", 0),
-        result.get("category"), result.get("date", "not found"),
+        result.get("merchant"),
+        result.get("amount", 0),
+        result.get("category"),
+        result.get("date", "not found"),
     )
     return jsonify(result)
+
 
 @app.route("/api/entries", methods=["GET"])
 def entries():
     return jsonify(get_all_entries())
+
 
 @app.route("/api/entries", methods=["POST"])
 def add():
@@ -120,10 +134,14 @@ def add():
     )
     log.info(
         "Entry saved — #%d  %r  $%.2f  [%s]  %s",
-        entry["id"], entry["merchant"], entry["amount"],
-        entry["category"], entry["date"],
+        entry["id"],
+        entry["merchant"],
+        entry["amount"],
+        entry["category"],
+        entry["date"],
     )
     return jsonify(entry), 201
+
 
 @app.route("/api/entries/<int:entry_id>", methods=["DELETE"])
 def delete(entry_id):
@@ -131,13 +149,16 @@ def delete(entry_id):
     log.info("Entry #%d deleted", entry_id)
     return jsonify({"deleted": entry_id})
 
+
 @app.route("/api/totals", methods=["GET"])
 def totals():
     return jsonify(get_totals())
 
+
 @app.route("/api/monthly", methods=["GET"])
 def monthly():
     return jsonify(get_monthly_totals())
+
 
 if __name__ == "__main__":
     init_db()

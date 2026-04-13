@@ -3,14 +3,17 @@ from datetime import datetime
 
 DB_PATH = "tracker.db"
 
+
 def get_conn():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
 
+
 def init_db():
     with get_conn() as conn:
-        conn.execute("""
+        conn.execute(
+            """
             CREATE TABLE IF NOT EXISTS entries (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 amount REAL NOT NULL,
@@ -19,8 +22,10 @@ def init_db():
                 notes TEXT DEFAULT '',
                 date TEXT NOT NULL
             )
-        """)
+        """
+        )
         conn.commit()
+
 
 def add_entry(amount, merchant, category, notes, date=None):
     if not date:
@@ -28,21 +33,28 @@ def add_entry(amount, merchant, category, notes, date=None):
     with get_conn() as conn:
         cur = conn.execute(
             "INSERT INTO entries (amount, merchant, category, notes, date) VALUES (?, ?, ?, ?, ?)",
-            (amount, merchant, category, notes, date)
+            (amount, merchant, category, notes, date),
         )
         conn.commit()
-        row = conn.execute("SELECT * FROM entries WHERE id = ?", (cur.lastrowid,)).fetchone()
+        row = conn.execute(
+            "SELECT * FROM entries WHERE id = ?", (cur.lastrowid,)
+        ).fetchone()
         return dict(row)
+
 
 def get_all_entries():
     with get_conn() as conn:
-        rows = conn.execute("SELECT * FROM entries ORDER BY date DESC, id DESC").fetchall()
+        rows = conn.execute(
+            "SELECT * FROM entries ORDER BY date DESC, id DESC"
+        ).fetchall()
         return [dict(r) for r in rows]
+
 
 def delete_entry(entry_id):
     with get_conn() as conn:
         conn.execute("DELETE FROM entries WHERE id = ?", (entry_id,))
         conn.commit()
+
 
 def get_monthly_totals():
     with get_conn() as conn:
@@ -59,10 +71,15 @@ def get_monthly_totals():
         ).fetchall()
         return [dict(r) for r in rows]
 
+
 def get_totals():
     with get_conn() as conn:
-        total = conn.execute("SELECT COALESCE(SUM(amount), 0) as total FROM entries").fetchone()["total"]
-        count = conn.execute("SELECT COUNT(*) as count FROM entries").fetchone()["count"]
+        total = conn.execute(
+            "SELECT COALESCE(SUM(amount), 0) as total FROM entries"
+        ).fetchone()["total"]
+        count = conn.execute("SELECT COUNT(*) as count FROM entries").fetchone()[
+            "count"
+        ]
         by_category = conn.execute(
             "SELECT category, COALESCE(SUM(amount), 0) as total FROM entries GROUP BY category"
         ).fetchall()
@@ -73,5 +90,5 @@ def get_totals():
             "total": round(total, 2),
             "count": count,
             "month_total": round(month_total, 2),
-            "by_category": [dict(r) for r in by_category]
+            "by_category": [dict(r) for r in by_category],
         }
