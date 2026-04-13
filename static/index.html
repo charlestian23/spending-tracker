@@ -519,6 +519,32 @@
       gap: 6px;
     }
 
+    .calc-inner {
+      display: none;
+      flex-direction: column;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .calc-inner.open {
+      display: flex;
+    }
+
+    .calc-toggle {
+      font-size: 12px;
+      color: var(--text-muted);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      font-family: inherit;
+      text-align: left;
+    }
+
+    .calc-toggle:hover {
+      color: var(--text);
+    }
+
     .calc-display {
       background: var(--bg-subtle);
       border: 1px solid var(--border-input);
@@ -723,6 +749,14 @@
       loadData();
     }
 
+    function toggleCalc() {
+      const inner = document.getElementById('calc-inner');
+      const btn = document.querySelector('.calc-toggle');
+      if (!inner) return;
+      const isOpen = inner.classList.toggle('open');
+      btn.textContent = isOpen ? '− calculator' : '＋ calculator';
+    }
+
     function toggleDark() {
       const isDark = document.body.classList.toggle('dark');
       localStorage.setItem('theme', isDark ? 'dark' : 'light');
@@ -770,6 +804,8 @@
               <label>Total amount ($)</label>
               <input type="number" id="edit-amount" value="${data.amount || ''}" data-original="${data.amount || ''}" step="0.01" min="0" placeholder="0.00" oninput="syncCalcDisplay()" />
               <div class="calc-wrap">
+                <button class="calc-toggle" onclick="toggleCalc()">＋ calculator</button>
+                <div class="calc-inner" id="calc-inner">
                 <div class="calc-display" id="calc-display">calculator</div>
                 <div class="calc-grid">
                   <button class="calc-btn" onclick="calcInput('7')">7</button>
@@ -791,6 +827,7 @@
                   <button class="calc-btn apply" onclick="calcApply()">= Apply to amount</button>
                   <button class="calc-btn op" onclick="calcBackspace()">⌫</button>
                   <button class="calc-btn reset" onclick="calcReset()" style="grid-column: span 4;">↺ Reset to original (${data.amount || '0'})</button>
+                </div>
                 </div>
               </div>
             </div>
