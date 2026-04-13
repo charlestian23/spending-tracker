@@ -14,7 +14,7 @@ def parse_receipt_with_ollama(image_b64: str) -> dict:
         "You are a receipt parser. Look at this receipt image and extract the total amount paid, "
         "the merchant or store name, and a short description of what was purchased. "
         "Respond ONLY with a valid JSON object in exactly this format: "
-        '{"merchant": "Whole Foods", "amount": 47.82, "category": "food", "notes": "Weekly groceries"}. '
+        '{"merchant": "Whole Foods", "amount": 47.82, "category": "food", "notes": "weekly groceries"}. '
         "The amount must be the final total including tax. "
         "Categories must be one of: food, shopping, entertainment, transportation, gas, other. "
         "If you cannot determine the total, set amount to null. "
@@ -61,7 +61,8 @@ def add():
         amount=data["amount"],
         merchant=data["merchant"],
         category=data.get("category", "other"),
-        notes=data.get("notes", "")
+        notes=data.get("notes", ""),
+        date=data.get("date", None)
     )
     return jsonify(entry), 201
 

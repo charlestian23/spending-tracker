@@ -262,9 +262,13 @@ async function handleFile(file) {
               <select id="edit-category">${catOptions}</select>
             </div>
             <div class="edit-field">
-              <label>Notes</label>
-              <input type="text" id="edit-notes" value="${data.notes || ''}" placeholder="Optional description" />
+              <label>Date</label>
+              <input type="date" id="edit-date" value="${new Date().toISOString().slice(0,10)}" />
             </div>
+          </div>
+          <div class="edit-field">
+            <label>Notes</label>
+            <input type="text" id="edit-notes" value="" placeholder="Optional description" />
           </div>
         </div>
         <div class="result-actions">
@@ -365,12 +369,14 @@ async function confirmAdd() {
   const amount = parseFloat(document.getElementById('edit-amount').value);
   const category = document.getElementById('edit-category').value;
   const notes = document.getElementById('edit-notes').value.trim();
+  const date = document.getElementById('edit-date').value;
   if (!merchant) { alert('Please enter a merchant name.'); return; }
   if (isNaN(amount) || amount <= 0) { alert('Please enter a valid amount.'); return; }
+  if (!date) { alert('Please enter a date.'); return; }
   await fetch('/api/entries', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ merchant, amount: Math.round(amount * 100) / 100, category, notes })
+    body: JSON.stringify({ merchant, amount: Math.round(amount * 100) / 100, category, notes, date })
   });
   pending = null;
   setStatus('');

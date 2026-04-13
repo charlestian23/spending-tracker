@@ -22,8 +22,9 @@ def init_db():
         """)
         conn.commit()
 
-def add_entry(amount, merchant, category, notes):
-    date = datetime.now().strftime("%Y-%m-%d")
+def add_entry(amount, merchant, category, notes, date=None):
+    if not date:
+        date = datetime.now().strftime("%Y-%m-%d")
     with get_conn() as conn:
         cur = conn.execute(
             "INSERT INTO entries (amount, merchant, category, notes, date) VALUES (?, ?, ?, ?, ?)",
