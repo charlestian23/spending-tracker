@@ -155,10 +155,12 @@ function renderChart(monthly) {
   const bars = monthly.map(m => {
     const pct = maxVal > 0 ? (m.total / yTop) * 100 : 0;
     const label = m.month.slice(0, 7);
-    const shortLabel = new Date(m.month + '-02').toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+    const d = new Date(m.month + '-02');
+    const shortLabel = d.toLocaleDateString('en-US', { month: 'short' }) + ' \'' + String(d.getFullYear()).slice(2);
+    const tooltipLabel = d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
     return `<div class="chart-bar-col">
       <div class="chart-bar" style="height:${Math.max(pct, 1)}%">
-        <div class="tooltip">${shortLabel}: ${fmt(m.total)}</div>
+        <div class="tooltip">${tooltipLabel}: ${fmt(m.total)}</div>
       </div>
       <div class="chart-label">${shortLabel}</div>
     </div>`;
@@ -219,6 +221,9 @@ async function handleFile(file) {
     pending = data;
     const cats = ['food','shopping','entertainment','transportation','gas','other'];
     const catOptions = cats.map(c => `<option value="${c}" ${data.category === c ? 'selected' : ''}>${catLabel(c)}</option>`).join('');
+    const today = new Date();
+    const localDate = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
+    const defaultDate = data.date || localDate;
     setStatus(`
       <div class="result">
         <div class="result-header">
@@ -266,7 +271,7 @@ async function handleFile(file) {
             </div>
             <div class="edit-field">
               <label>Date</label>
-              <input type="date" id="edit-date" value="${data.date || new Date().toISOString().slice(0,10)}" />
+              <input type="date" id="edit-date" value="${defaultDate}" />
             </div>
           </div>
           <div class="edit-field">
