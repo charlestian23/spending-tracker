@@ -88,6 +88,8 @@
   .calc-btn.op { background: #f5f5f4; color: #44403c; font-weight: 500; }
   .calc-btn.op:hover { background: #e7e5e4; }
   .calc-btn.apply { background: #1c1917; color: #fff; border-color: #1c1917; grid-column: span 2; font-weight: 500; }
+  .calc-btn.reset { color: #78716c; border-color: #d6d3d1; font-size: 0.75rem; }
+  .calc-btn.reset:hover { background: #f5f5f4; }
   .calc-btn.apply:hover { background: #292524; }
   .calc-btn.clear { color: #dc2626; border-color: #fca5a5; }
   .calc-btn.clear:hover { background: #fef2f2; }
@@ -230,7 +232,7 @@ async function handleFile(file) {
             </div>
             <div class="edit-field">
               <label>Total amount ($)</label>
-              <input type="number" id="edit-amount" value="${data.amount || ''}" step="0.01" min="0" placeholder="0.00" oninput="syncCalcDisplay()" />
+              <input type="number" id="edit-amount" value="${data.amount || ''}" data-original="${data.amount || ''}" step="0.01" min="0" placeholder="0.00" oninput="syncCalcDisplay()" />
               <div class="calc-wrap">
                 <div class="calc-display" id="calc-display">calculator</div>
                 <div class="calc-grid">
@@ -252,6 +254,7 @@ async function handleFile(file) {
                   <button class="calc-btn op" onclick="calcInput('/')">÷</button>
                   <button class="calc-btn apply" onclick="calcApply()">= Apply to amount</button>
                   <button class="calc-btn op" onclick="calcBackspace()">⌫</button>
+                  <button class="calc-btn reset" onclick="calcReset()" style="grid-column: span 4;">↺ Reset to original (${data.amount || '0'})</button>
                 </div>
               </div>
             </div>
@@ -319,6 +322,16 @@ function calcBackspace() {
   calcExpr = calcExpr.slice(0, -1);
   const disp = document.getElementById('calc-display');
   if (disp) disp.textContent = calcExpr || 'calculator';
+}
+
+function calcReset() {
+  const amtEl = document.getElementById('edit-amount');
+  if (!amtEl) return;
+  const original = amtEl.dataset.original;
+  amtEl.value = original;
+  calcExpr = '';
+  const disp = document.getElementById('calc-display');
+  if (disp) disp.textContent = 'calculator';
 }
 
 function calcClear() {
