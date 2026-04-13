@@ -266,7 +266,7 @@ async function handleFile(file) {
             </div>
             <div class="edit-field">
               <label>Date</label>
-              <input type="date" id="edit-date" value="${new Date().toISOString().slice(0,10)}" />
+              <input type="date" id="edit-date" value="${data.date || new Date().toISOString().slice(0,10)}" />
             </div>
           </div>
           <div class="edit-field">
