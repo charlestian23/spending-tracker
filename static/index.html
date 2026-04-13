@@ -80,6 +80,17 @@
   .chart-label { font-size: 10px; color: #78716c; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; }
   .chart-y-axis { position: absolute; left: 0; top: 0; height: 170px; width: 44px; display: flex; flex-direction: column; justify-content: space-between; }
   .chart-y-label { font-size: 10px; color: #a8a29e; text-align: right; padding-right: 6px; }
+  .calc-wrap { display: flex; flex-direction: column; gap: 6px; }
+  .calc-display { background: #fafaf9; border: 1px solid #d6d3d1; border-radius: 7px; padding: 8px 10px; font-size: 0.875rem; font-family: monospace; color: #57534e; min-height: 28px; word-break: break-all; }
+  .calc-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
+  .calc-btn { padding: 7px 4px; border: 1px solid #d6d3d1; border-radius: 6px; background: #fff; color: #1c1917; font-size: 0.8rem; cursor: pointer; font-family: inherit; text-align: center; transition: background 0.1s; }
+  .calc-btn:hover { background: #f5f5f4; }
+  .calc-btn.op { background: #f5f5f4; color: #44403c; font-weight: 500; }
+  .calc-btn.op:hover { background: #e7e5e4; }
+  .calc-btn.apply { background: #1c1917; color: #fff; border-color: #1c1917; grid-column: span 2; font-weight: 500; }
+  .calc-btn.apply:hover { background: #292524; }
+  .calc-btn.clear { color: #dc2626; border-color: #fca5a5; }
+  .calc-btn.clear:hover { background: #fef2f2; }
 </style>
 </head>
 <body>
@@ -219,7 +230,30 @@ async function handleFile(file) {
             </div>
             <div class="edit-field">
               <label>Total amount ($)</label>
-              <input type="number" id="edit-amount" value="${data.amount || ''}" step="0.01" min="0" placeholder="0.00" />
+              <input type="number" id="edit-amount" value="${data.amount || ''}" step="0.01" min="0" placeholder="0.00" oninput="syncCalcDisplay()" />
+              <div class="calc-wrap">
+                <div class="calc-display" id="calc-display">calculator</div>
+                <div class="calc-grid">
+                  <button class="calc-btn" onclick="calcInput('7')">7</button>
+                  <button class="calc-btn" onclick="calcInput('8')">8</button>
+                  <button class="calc-btn" onclick="calcInput('9')">9</button>
+                  <button class="calc-btn op" onclick="calcInput('+')">+</button>
+                  <button class="calc-btn" onclick="calcInput('4')">4</button>
+                  <button class="calc-btn" onclick="calcInput('5')">5</button>
+                  <button class="calc-btn" onclick="calcInput('6')">6</button>
+                  <button class="calc-btn op" onclick="calcInput('-')">−</button>
+                  <button class="calc-btn" onclick="calcInput('1')">1</button>
+                  <button class="calc-btn" onclick="calcInput('2')">2</button>
+                  <button class="calc-btn" onclick="calcInput('3')">3</button>
+                  <button class="calc-btn op" onclick="calcInput('*')">×</button>
+                  <button class="calc-btn" onclick="calcInput('0')">0</button>
+                  <button class="calc-btn" onclick="calcInput('.')">.</button>
+                  <button class="calc-btn clear" onclick="calcClear()">C</button>
+                  <button class="calc-btn op" onclick="calcInput('/')">÷</button>
+                  <button class="calc-btn apply" onclick="calcApply()">= Apply to amount</button>
+                  <button class="calc-btn op" onclick="calcBackspace()">⌫</button>
+                </div>
+              </div>
             </div>
           </div>
           <div class="edit-row">
@@ -243,6 +277,87 @@ async function handleFile(file) {
     setStatus(`<div class="error">Could not connect to Ollama. Is it running? (ollama serve)</div>`);
   }
 }
+
+let calcExpr = '';
+
+function syncCalcDisplay() {
+  // Only sync if the calculator is empty — don't overwrite an in-progress expression
+  if (calcExpr === '') {
+    const disp = document.getElementById('calc-display');
+    if (disp) disp.textContent = 'calculator';
+  }
+}
+
+function getBaseAmount() {
+  const amtEl = document.getElementById('edit-amount');
+  return amtEl ? (parseFloat(amtEl.value) || 0) : 0;
+}
+
+function calcInput(val) {
+  const disp = document.getElementById('calc-display');
+  if (!disp) return;
+  const ops = ['+', '-', '*', '/'];
+  // If expression is empty and user presses an operator, seed with current amount
+  if (calcExpr === '' && ops.includes(val)) {
+    calcExpr = String(getBaseAmount());
+  }
+  const lastChar = calcExpr.slice(-1);
+  // Replace consecutive operators
+  if (ops.includes(val) && ops.includes(lastChar)) calcExpr = calcExpr.slice(0, -1);
+  // Prevent double decimal in same number segment
+  const segments = calcExpr.split(/[+\-*/]/);
+  if (val === '.' && segments[segments.length - 1].includes('.')) return;
+  calcExpr += val;
+  disp.textContent = calcExpr;
+}
+
+function calcBackspace() {
+  calcExpr = calcExpr.slice(0, -1);
+  const disp = document.getElementById('calc-display');
+  if (disp) disp.textContent = calcExpr || 'calculator';
+}
+
+function calcClear() {
+  calcExpr = '';
+  const disp = document.getElementById('calc-display');
+  if (disp) disp.textContent = 'calculator';
+}
+
+function calcApply() {
+  if (!calcExpr) return;
+  try {
+    const result = Math.round(Function('"use strict"; return (' + calcExpr + ')')() * 100) / 100;
+    if (isNaN(result) || !isFinite(result)) { alert('Invalid expression.'); return; }
+    const amtEl = document.getElementById('edit-amount');
+    if (amtEl) amtEl.value = result.toFixed(2);
+    calcExpr = '';
+    const disp = document.getElementById('calc-display');
+    if (disp) disp.textContent = 'calculator';
+  } catch(e) {
+    alert('Invalid expression.');
+  }
+}
+
+// Numpad and keyboard support
+document.addEventListener('keydown', function(e) {
+  if (!document.getElementById('calc-display')) return;
+  const numpadMap = {
+    'Numpad0': '0', 'Numpad1': '1', 'Numpad2': '2', 'Numpad3': '3',
+    'Numpad4': '4', 'Numpad5': '5', 'Numpad6': '6', 'Numpad7': '7',
+    'Numpad8': '8', 'Numpad9': '9', 'NumpadDecimal': '.', 'NumpadAdd': '+',
+    'NumpadSubtract': '-', 'NumpadMultiply': '*', 'NumpadDivide': '/',
+    'NumpadEnter': 'enter', 'Period': '.'
+  };
+  const mapped = numpadMap[e.code];
+  if (mapped) {
+    e.preventDefault();
+    if (mapped === 'enter') { calcApply(); }
+    else { calcInput(mapped); }
+  } else if (e.code === 'Backspace' && document.activeElement.id !== 'edit-amount' &&
+             document.activeElement.id !== 'edit-merchant' && document.activeElement.id !== 'edit-notes') {
+    calcBackspace();
+  }
+});
 
 async function confirmAdd() {
   if (!pending) return;
