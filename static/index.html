@@ -134,6 +134,47 @@
       overflow: visible;
     }
 
+    .card-tabs {
+      display: flex;
+      gap: 0;
+      margin: -1.5rem -1.5rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+      border-radius: 12px 12px 0 0;
+      overflow: hidden;
+    }
+
+    .card-tab {
+      flex: 1;
+      padding: 0.75rem 1rem;
+      font-size: 0.875rem;
+      font-family: inherit;
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      color: var(--text-muted);
+      transition: color 0.12s;
+    }
+
+    .card-tab:hover {
+      color: var(--text);
+      background: var(--bg-subtle);
+    }
+
+    .card-tab.active {
+      color: var(--text);
+      border-bottom-color: var(--text);
+      font-weight: 500;
+    }
+
+    .tab-panel {
+      display: none;
+    }
+
+    .tab-panel.active {
+      display: block;
+    }
+
     .card h2 {
       font-size: 1rem;
       font-weight: 600;
@@ -678,14 +719,57 @@
     </div>
 
     <div class="card">
-      <h2>Upload a receipt</h2>
-      <div class="dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()">
-        <input type="file" id="fileInput" accept="image/*" />
-        <div class="icon">📷</div>
-        <strong>Click or drag a receipt photo</strong>
-        <p>JPEG, PNG, or WEBP — parsed locally by Ollama + Llama 3.2 Vision</p>
+      <div class="card-tabs">
+        <button class="card-tab active" onclick="switchTab('upload')">Upload receipt</button>
+        <button class="card-tab" onclick="switchTab('manual')">Manual entry</button>
       </div>
-      <div id="upload-status"></div>
+      <div class="tab-panel active" id="tab-upload">
+        <div class="dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()">
+          <input type="file" id="fileInput" accept="image/*" />
+          <div class="icon">📷</div>
+          <strong>Click or drag a receipt photo</strong>
+          <p>JPEG, PNG, or WEBP — parsed locally by Ollama + Llama 3.2 Vision</p>
+        </div>
+        <div id="upload-status"></div>
+      </div>
+      <div class="tab-panel" id="tab-manual">
+        <div class="edit-form" style="padding:0">
+          <div class="edit-row">
+            <div class="edit-field">
+              <label>Merchant</label>
+              <input type="text" id="manual-merchant" placeholder="Store or merchant name" />
+            </div>
+            <div class="edit-field">
+              <label>Total amount ($)</label>
+              <input type="number" id="manual-amount" step="0.01" min="0" placeholder="0.00" />
+            </div>
+          </div>
+          <div class="edit-row">
+            <div class="edit-field">
+              <label>Category</label>
+              <select id="manual-category">
+                <option value="food">Food &amp; drink</option>
+                <option value="shopping">Shopping</option>
+                <option value="entertainment">Entertainment</option>
+                <option value="transportation">Transportation</option>
+                <option value="gas">Gas</option>
+                <option value="other" selected>Other</option>
+              </select>
+            </div>
+            <div class="edit-field">
+              <label>Date</label>
+              <input type="date" id="manual-date" />
+            </div>
+          </div>
+          <div class="edit-field">
+            <label>Notes</label>
+            <input type="text" id="manual-notes" placeholder="Optional description" />
+          </div>
+          <div style="display:flex;gap:8px;margin-top:4px">
+            <button class="btn btn-primary" onclick="saveManualEntry()">Add to log</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="card">
@@ -698,6 +782,39 @@
 
   <script>
     let pending = null;
+
+    function switchTab(tab) {
+      document.querySelectorAll('.card-tab').forEach((el, i) => el.classList.toggle('active', (i === 0) === (tab === 'upload')));
+      document.getElementById('tab-upload').classList.toggle('active', tab === 'upload');
+      document.getElementById('tab-manual').classList.toggle('active', tab === 'manual');
+      if (tab === 'manual') {
+        const d = new Date();
+        const localDate = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        const el = document.getElementById('manual-date');
+        if (el && !el.value) el.value = localDate;
+      }
+    }
+
+    async function saveManualEntry() {
+      const merchant = document.getElementById('manual-merchant').value.trim();
+      const amount = parseFloat(document.getElementById('manual-amount').value);
+      const category = document.getElementById('manual-category').value;
+      const date = document.getElementById('manual-date').value;
+      const notes = document.getElementById('manual-notes').value.trim();
+      if (!merchant) { alert('Please enter a merchant name.'); return; }
+      if (isNaN(amount) || amount <= 0) { alert('Please enter a valid amount.'); return; }
+      if (!date) { alert('Please enter a date.'); return; }
+      await fetch('/api/entries', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ merchant, amount: Math.round(amount * 100) / 100, category, notes, date })
+      });
+      document.getElementById('manual-merchant').value = '';
+      document.getElementById('manual-amount').value = '';
+      document.getElementById('manual-notes').value = '';
+      document.getElementById('manual-category').value = 'other';
+      loadData();
+    }
 
     function catClass(c) { return 'cat-' + (c || 'other'); }
     function catLabel(c) {
