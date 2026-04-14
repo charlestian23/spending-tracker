@@ -131,6 +131,7 @@
       border-radius: 12px;
       padding: 1.5rem;
       margin-bottom: 1.5rem;
+      overflow: visible;
     }
 
     .card h2 {
@@ -207,7 +208,7 @@
       margin-top: 1rem;
       border: 1px solid var(--border);
       border-radius: 10px;
-      overflow: hidden;
+      overflow: visible;
     }
 
     .result-header {
@@ -513,36 +514,57 @@
       padding-right: 6px;
     }
 
-    .calc-wrap {
+    .calc-inner.open {
       display: flex;
-      flex-direction: column;
-      gap: 6px;
+    }
+
+    .calc-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+      color: var(--text-muted);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 2px 0;
+      font-family: inherit;
+    }
+
+    .calc-toggle:hover {
+      color: var(--text);
+    }
+
+    .calc-toggle .arrow {
+      display: inline-block;
+      transition: transform 0.15s;
+      font-style: normal;
+    }
+
+    .calc-toggle.open .arrow {
+      transform: rotate(180deg);
+    }
+
+    .calc-anchor {
+      position: relative;
+      height: 0;
+      overflow: visible;
     }
 
     .calc-inner {
       display: none;
       flex-direction: column;
       gap: 6px;
-      margin-top: 4px;
-    }
-
-    .calc-inner.open {
-      display: flex;
-    }
-
-    .calc-toggle {
-      font-size: 12px;
-      color: var(--text-muted);
-      background: none;
-      border: none;
-      cursor: pointer;
-      padding: 0;
-      font-family: inherit;
-      text-align: left;
-    }
-
-    .calc-toggle:hover {
-      color: var(--text);
+      padding: 10px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+      position: absolute;
+      top: 4px;
+      right: 0;
+      left: 0;
+      z-index: 200;
     }
 
     .calc-display {
@@ -751,10 +773,11 @@
 
     function toggleCalc() {
       const inner = document.getElementById('calc-inner');
-      const btn = document.querySelector('.calc-toggle');
-      if (!inner) return;
+      const btn = document.getElementById('calc-toggle-btn');
+      if (!inner || !btn) return;
       const isOpen = inner.classList.toggle('open');
-      btn.textContent = isOpen ? '− calculator' : '＋ calculator';
+      btn.classList.toggle('open', isOpen);
+      btn.innerHTML = isOpen ? '▴ calculator' : '▾ calculator';
     }
 
     function toggleDark() {
@@ -803,33 +826,31 @@
             <div class="edit-field">
               <label>Total amount ($)</label>
               <input type="number" id="edit-amount" value="${data.amount || ''}" data-original="${data.amount || ''}" step="0.01" min="0" placeholder="0.00" oninput="syncCalcDisplay()" />
-              <div class="calc-wrap">
-                <button class="calc-toggle" onclick="toggleCalc()">＋ calculator</button>
-                <div class="calc-inner" id="calc-inner">
-                <div class="calc-display" id="calc-display">calculator</div>
-                <div class="calc-grid">
-                  <button class="calc-btn" onclick="calcInput('7')">7</button>
-                  <button class="calc-btn" onclick="calcInput('8')">8</button>
-                  <button class="calc-btn" onclick="calcInput('9')">9</button>
-                  <button class="calc-btn op" onclick="calcInput('+')">+</button>
-                  <button class="calc-btn" onclick="calcInput('4')">4</button>
-                  <button class="calc-btn" onclick="calcInput('5')">5</button>
-                  <button class="calc-btn" onclick="calcInput('6')">6</button>
-                  <button class="calc-btn op" onclick="calcInput('-')">−</button>
-                  <button class="calc-btn" onclick="calcInput('1')">1</button>
-                  <button class="calc-btn" onclick="calcInput('2')">2</button>
-                  <button class="calc-btn" onclick="calcInput('3')">3</button>
-                  <button class="calc-btn op" onclick="calcInput('*')">×</button>
-                  <button class="calc-btn" onclick="calcInput('0')">0</button>
-                  <button class="calc-btn" onclick="calcInput('.')">.</button>
-                  <button class="calc-btn clear" onclick="calcClear()">C</button>
-                  <button class="calc-btn op" onclick="calcInput('/')">÷</button>
-                  <button class="calc-btn apply" onclick="calcApply()">= Apply to amount</button>
-                  <button class="calc-btn op" onclick="calcBackspace()">⌫</button>
-                  <button class="calc-btn reset" onclick="calcReset()" style="grid-column: span 4;">↺ Reset to original (${data.amount || '0'})</button>
-                </div>
-                </div>
-              </div>
+              <button class="calc-toggle" id="calc-toggle-btn" onclick="toggleCalc()">▾ calculator</button>
+              <div class="calc-anchor"><div class="calc-inner" id="calc-inner">
+            <div class="calc-display" id="calc-display">calculator</div>
+            <div class="calc-grid">
+              <button class="calc-btn" onclick="calcInput('7')">7</button>
+              <button class="calc-btn" onclick="calcInput('8')">8</button>
+              <button class="calc-btn" onclick="calcInput('9')">9</button>
+              <button class="calc-btn op" onclick="calcInput('+')">+</button>
+              <button class="calc-btn" onclick="calcInput('4')">4</button>
+              <button class="calc-btn" onclick="calcInput('5')">5</button>
+              <button class="calc-btn" onclick="calcInput('6')">6</button>
+              <button class="calc-btn op" onclick="calcInput('-')">−</button>
+              <button class="calc-btn" onclick="calcInput('1')">1</button>
+              <button class="calc-btn" onclick="calcInput('2')">2</button>
+              <button class="calc-btn" onclick="calcInput('3')">3</button>
+              <button class="calc-btn op" onclick="calcInput('*')">×</button>
+              <button class="calc-btn" onclick="calcInput('0')">0</button>
+              <button class="calc-btn" onclick="calcInput('.')">.</button>
+              <button class="calc-btn clear" onclick="calcClear()">C</button>
+              <button class="calc-btn op" onclick="calcInput('/')">÷</button>
+              <button class="calc-btn apply" onclick="calcApply()">= Apply to amount</button>
+              <button class="calc-btn op" onclick="calcBackspace()">⌫</button>
+              <button class="calc-btn reset" onclick="calcReset()" style="grid-column: span 4;">↺ Reset to original (${data.amount || '0'})</button>
+            </div>
+              </div></div>
             </div>
           </div>
           <div class="edit-row">
