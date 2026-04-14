@@ -949,9 +949,13 @@
       }
     }
 
-    // Numpad and keyboard support
+    // Numpad and keyboard support — only active when calculator is open and amount field is not focused
     document.addEventListener('keydown', function (e) {
-      if (!document.getElementById('calc-display')) return;
+      const calcInner = document.getElementById('calc-inner');
+      if (!calcInner || !calcInner.classList.contains('open')) return;
+      const active = document.activeElement;
+      const typingInField = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT');
+      if (typingInField) return;
       const numpadMap = {
         'Numpad0': '0', 'Numpad1': '1', 'Numpad2': '2', 'Numpad3': '3',
         'Numpad4': '4', 'Numpad5': '5', 'Numpad6': '6', 'Numpad7': '7',
@@ -964,8 +968,8 @@
         e.preventDefault();
         if (mapped === 'enter') { calcApply(); }
         else { calcInput(mapped); }
-      } else if (e.code === 'Backspace' && document.activeElement.id !== 'edit-amount' &&
-        document.activeElement.id !== 'edit-merchant' && document.activeElement.id !== 'edit-notes') {
+      } else if (e.code === 'Backspace') {
+        e.preventDefault();
         calcBackspace();
       }
     });
