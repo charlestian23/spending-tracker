@@ -466,7 +466,6 @@
     .chart-wrap {
       position: relative;
       width: 100%;
-      height: 220px;
     }
 
     .chart-empty {
@@ -823,36 +822,70 @@
     function fmt(n) { return '$' + Number(n).toFixed(2); }
 
     function renderChart(monthly) {
+      const BAR_H = 160;   // px height of the bar drawing area
+      const Y_W = 48;    // px width reserved for y-axis labels
       const wrap = document.getElementById('chart-wrap');
       if (!monthly || !monthly.length) {
         wrap.innerHTML = '<div class="chart-empty">No data yet — add some transactions to see your chart.</div>';
         return;
       }
+
       const maxVal = Math.max(...monthly.map(m => m.total));
       const yTop = Math.ceil(maxVal / 50) * 50 || 100;
-      const yMid = yTop / 2;
-      const yLabels = [fmt(yTop), fmt(yMid), '$0'];
 
-      const bars = monthly.map(m => {
-        const pct = maxVal > 0 ? (m.total / yTop) * 100 : 0;
-        const label = m.month.slice(0, 7);
+      // Y-axis ticks every $50
+      const ticks = [];
+      for (let t = 0; t <= yTop; t += 50) ticks.push(t);
+
+      // Build gridline + label HTML — positioned from bottom of bar area
+      const gridHTML = ticks.map(t => {
+        const btm = Math.round((t / yTop) * BAR_H);
+        return `
+      <div style="position:absolute;bottom:${btm}px;left:${Y_W}px;right:0;
+                  border-top:1px dashed var(--border);pointer-events:none;z-index:0;"></div>
+      <div style="position:absolute;bottom:${btm - 7}px;left:0;width:${Y_W - 4}px;
+                  font-size:10px;color:var(--text-faint);text-align:right;">$${t}</div>`;
+      }).join('');
+
+      // Build bars
+      const barsHTML = monthly.map(m => {
+        const h = Math.max(Math.round((m.total / yTop) * BAR_H), 2);
         const d = new Date(m.month + '-02');
-        const shortLabel = d.toLocaleDateString('en-US', { month: 'short' }) + ' \'' + String(d.getFullYear()).slice(2);
-        const tooltipLabel = d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+        const lbl = d.toLocaleDateString('en-US', { month: 'short' }) + ' \'' + String(d.getFullYear()).slice(2);
+        const tip = d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
         return `<div class="chart-bar-col">
-      <div class="chart-bar" style="height:${Math.max(pct, 1)}%">
-        <div class="tooltip">${tooltipLabel}: ${fmt(m.total)}</div>
+      <div class="chart-bar" style="height:${h}px">
+        <div class="tooltip">${tip}: ${fmt(m.total)}</div>
       </div>
-      <div class="chart-label">${shortLabel}</div>
+      <div class="chart-label">${lbl}</div>
     </div>`;
       }).join('');
 
-      const yAxis = yLabels.map(l => `<div class="chart-y-label">${l}</div>`).join('');
-
       wrap.innerHTML = `
-    <div style="position:relative">
-      <div class="chart-y-axis">${yAxis}</div>
-      <div class="chart-bars">${bars}</div>
+    <div style="position:relative;height:${BAR_H}px;margin-bottom:20px;">
+      ${gridHTML}
+      <div style="position:absolute;bottom:0;left:${Y_W}px;right:0;top:0;
+                  display:flex;align-items:flex-end;gap:6px;z-index:1;">
+        ${monthly.map(m => {
+        const h = Math.max(Math.round((m.total / yTop) * BAR_H), 2);
+        const d = new Date(m.month + '-02');
+        const lbl = d.toLocaleDateString('en-US', { month: 'short' }) + ' \'' + String(d.getFullYear()).slice(2);
+        const tip = d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+        return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;">
+            <div class="chart-bar" style="width:100%;height:${h}px;border-radius:4px 4px 0 0;">
+              <div class="tooltip">${tip}: ${fmt(m.total)}</div>
+            </div>
+          </div>`;
+      }).join('')}
+      </div>
+    </div>
+    <div style="display:flex;gap:6px;padding-left:${Y_W}px;">
+      ${monthly.map(m => {
+        const d = new Date(m.month + '-02');
+        const lbl = d.toLocaleDateString('en-US', { month: 'short' }) + ' \'' + String(d.getFullYear()).slice(2);
+        return `<div style="flex:1;text-align:center;font-size:10px;color:var(--text-muted);
+                            overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${lbl}</div>`;
+      }).join('')}
     </div>`;
     }
 
